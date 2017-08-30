@@ -963,7 +963,7 @@ g_date_time_new (GTimeZone *tz,
 
   if (year < 1 || year > 9999 ||
       month < 1 || month > 12 ||
-      day < 1 || day > 31 ||
+      day < 1 || day > days_in_months[GREGORIAN_LEAP (year)][month] ||
       hour < 0 || hour > 23 ||
       minute < 0 || minute > 59 ||
       seconds < 0.0 || seconds >= 60.0)
@@ -2220,7 +2220,7 @@ format_ampm (GDateTime *datetime,
              gboolean   uppercase)
 {
   const gchar *ampm;
-  gchar       *tmp, *ampm_dup;
+  gchar       *tmp = NULL, *ampm_dup;
   gsize        len;
 
   ampm = GET_AMPM (datetime);

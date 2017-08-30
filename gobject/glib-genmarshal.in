@@ -820,7 +820,11 @@ def generate_marshallers_body(outfile, retval, params,
         else:
             decl_visibility = Visibility.EXTERN
         proto = ['/* Prototype for -Wmissing-prototypes */']
+        # Add C++ guards in case somebody compiles the generated code
+        # with a C++ compiler
+        proto += ['G_BEGIN_DECLS']
         proto += generate_prototype(retval, params, prefix, decl_visibility, False)
+        proto += ['G_END_DECLS']
         outfile.write('\n'.join(proto))
         outfile.write('\n')
 
@@ -836,7 +840,10 @@ def generate_marshallers_body(outfile, retval, params,
             else:
                 decl_visibility = Visibility.EXTERN
             proto = ['/* Prototype for -Wmissing-prototypes */']
+            # Add C++ guards here as well
+            proto += ['G_BEGIN_DECLS']
             proto += generate_prototype(retval, params, prefix, decl_visibility, True)
+            proto += ['G_END_DECLS']
             outfile.write('\n'.join(proto))
             outfile.write('\n')
 

@@ -16,6 +16,8 @@ import sys
 import tempfile
 import io
 import errno
+import codecs
+import locale
 
 VERSION_STR = '''glib-mkenums version @VERSION@
 glib-genmarshal comes with ABSOLUTELY NO WARRANTY.
@@ -24,7 +26,13 @@ the GNU General Public License which can be found in the
 GLib source package. Sources, examples and contact
 information are available at http://www.gtk.org'''
 
-output_stream = sys.stdout
+# Python 2 defaults to ASCII in case stdout is redirected.
+# This should make it match Python 3, which uses the locale encoding.
+if sys.stdout.encoding is None:
+    output_stream = codecs.getwriter(
+        locale.getpreferredencoding())(sys.stdout)
+else:
+    output_stream = sys.stdout
 
 # pylint: disable=too-few-public-methods
 class Color:
@@ -75,7 +83,7 @@ def write_output(output):
 
 # glib-mkenums.py
 # Information about the current enumeration
-flags = False               # Is enumeration a bitmask?
+flags = None # Is enumeration a bitmask?
 option_underscore_name = '' # Overriden underscore variant of the enum name
                             # for example to fix the cases we don't get the
                             # mixed-case -> underscorized transform right.
@@ -188,7 +196,7 @@ def parse_entries(file, file_name):
                 value = groups[1]
             if len(groups) > 2:
                 options = groups[2]
-            if not flags and value is not None and '<<' in value:
+            if flags is None and value is not None and '<<' in value:
                 seenbitshift = 1
 
             if options is not None:
@@ -366,7 +374,9 @@ if output is not None:
     out_suffix = '_' + os.path.splitext(out_fn)[1]
     if out_dir == '':
         out_dir = '.'
-    tmpfile = tempfile.NamedTemporaryFile(dir=out_dir, delete=False)
+    fd, filename = tempfile.mkstemp(dir=out_dir)
+    os.close(fd)
+    tmpfile = io.open(filename, "w", encoding="utf-8")
     output_stream = tmpfile
 else:
     tmpfile = None
@@ -439,12 +449,17 @@ def process_file(curfilename):
                 if 'skip' in options:
                     continue
                 enum_prefix = options.get('prefix', None)
-                flags = 'flags' in options
+                flags = options.get('flags', None)
+                if 'flags' in options:
+                    if flags is None:
+                        flags = 1
+                    else:
+                        flags = int(flags)
                 option_lowercase_name = options.get('lowercase_name', None)
                 option_underscore_name = options.get('underscore_name', None)
             else:
                 enum_prefix = None
-                flags = False
+                flags = None
                 option_lowercase_name = None
                 option_underscore_name = None
 
@@ -469,7 +484,7 @@ def process_file(curfilename):
             parse_entries(curfile, curfilename)
 
             # figure out if this was a flags or enums enumeration
-            if not flags:
+            if flags is None:
                 flags = seenbitshift
 
             # Autogenerate a prefix

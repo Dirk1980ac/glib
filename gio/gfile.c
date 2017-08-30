@@ -2777,9 +2777,10 @@ copy_stream_with_progress (GInputStream           *in,
                            gpointer                progress_callback_data,
                            GError                **error)
 {
-  gssize n_read, n_written;
+  gssize n_read;
+  gsize n_written;
   goffset current_size;
-  char *buffer, *p;
+  char *buffer;
   gboolean res;
   goffset total_size;
   GFileInfo *info;
@@ -2833,20 +2834,7 @@ copy_stream_with_progress (GInputStream           *in,
 
       current_size += n_read;
 
-      p = buffer;
-      while (n_read > 0)
-        {
-          n_written = g_output_stream_write (out, p, n_read, cancellable, error);
-          if (n_written == -1)
-            {
-              res = FALSE;
-              break;
-            }
-
-          p += n_written;
-          n_read -= n_written;
-        }
-
+      res = g_output_stream_write_all (out, buffer, n_read, &n_written, cancellable, error);
       if (!res)
         break;
 
@@ -3000,7 +2988,7 @@ btrfs_reflink_with_progress (GInputStream           *in,
 {
   goffset source_size;
   int fd_in, fd_out;
-  int ret;
+  int ret, errsv;
 
   fd_in = g_file_descriptor_based_get_fd (G_FILE_DESCRIPTOR_BASED (in));
   fd_out = g_file_descriptor_based_get_fd (G_FILE_DESCRIPTOR_BASED (out));
@@ -3015,14 +3003,15 @@ btrfs_reflink_with_progress (GInputStream           *in,
    *
    * By the time we get here, *in and *out are both regular files */
   ret = ioctl (fd_out, BTRFS_IOC_CLONE, fd_in);
+  errsv = errno;
 
   if (ret < 0)
     {
-      if (errno == EXDEV)
+      if (errsv == EXDEV)
 	g_set_error_literal (error, G_IO_ERROR,
 			     G_IO_ERROR_NOT_SUPPORTED,
 			     _("Copy (reflink/clone) between mounts is not supported"));
-      else if (errno == EINVAL)
+      else if (errsv == EINVAL)
 	g_set_error_literal (error, G_IO_ERROR,
 			     G_IO_ERROR_NOT_SUPPORTED,
 			     _("Copy (reflink/clone) is not supported or invalid"));
