@@ -84,11 +84,14 @@ meson_build_files = \
 	gio/kqueue/meson.build \
 	gio/meson.build \
 	gio/tests/meson.build \
+	gio/tests/gengiotypefuncs.py \
 	gio/tests/modules/meson.build \
 	gio/tests/gdbus-object-manager-example/meson.build \
 	gio/tests/de/LC_MESSAGES/meson.build \
 	gio/win32/meson.build \
 	gio/xdgmime/meson.build \
+	glib/glibconfig.h.in \
+	glib/gnulib/meson.build \
 	glib/libcharset/meson.build \
 	glib/meson.build \
 	glib/pcre/meson.build \
@@ -97,7 +100,7 @@ meson_build_files = \
 	gobject/meson.build \
 	gobject/tests/meson.build \
 	gthread/meson.build \
-	po/meson.build
+	po/meson.build \
 	tests/refcount/meson.build \
 	tests/meson.build \
 	tests/gobject/meson.build \
@@ -146,7 +149,7 @@ valgrinddir = $(datadir)/glib-2.0/valgrind
 dist_valgrind_DATA = glib.supp
 
 # build documentation when doing distcheck
-DISTCHECK_CONFIGURE_FLAGS = --enable-debug --enable-gtk-doc --enable-man --disable-maintainer-mode
+AM_DISTCHECK_CONFIGURE_FLAGS = --enable-debug --enable-gtk-doc --enable-man --disable-maintainer-mode
 
 DISTCLEANFILES += config.lt
 

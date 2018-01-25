@@ -20,6 +20,7 @@
 
 #include "config.h"
 #include "giomodule.h"
+#include "giomodule-priv.h"
 
 #include <gstdio.h>
 #include <errno.h>
@@ -42,6 +43,7 @@ query_dir (const char *dirname)
 {
   GString *data;
   GDir *dir;
+  GList *list = NULL, *iterator = NULL;
   const char *name;
   char *cachename;
   char **(* query)  (void);
@@ -63,11 +65,16 @@ query_dir (const char *dirname)
   data = g_string_new ("");
 
   while ((name = g_dir_read_name (dir)))
+    list = g_list_prepend (list, g_strdup (name));
+
+  list = g_list_sort (list, (GCompareFunc) g_strcmp0);
+  for (iterator = list; iterator; iterator = iterator->next)
     {
       GModule *module;
       gchar     *path;
       char **extension_points;
 
+      name = iterator->data;
       if (!is_valid_module_name (name))
 	continue;
 
@@ -77,7 +84,20 @@ query_dir (const char *dirname)
 
       if (module)
 	{
-	  g_module_symbol (module, "g_io_module_query", (gpointer) &query);
+	  gchar *modulename;
+	  gchar *symname;
+
+	  modulename = _g_io_module_extract_name (name);
+	  symname = g_strconcat ("g_io_", modulename, "_query", NULL);
+	  g_module_symbol (module, symname, (gpointer) &query);
+	  g_free (symname);
+	  g_free (modulename);
+
+	  if (!query)
+	    {
+	      /* Fallback to old name */
+	      g_module_symbol (module, "g_io_module_query", (gpointer) &query);
+	    }
 
 	  if (query)
 	    {
@@ -100,6 +120,7 @@ query_dir (const char *dirname)
     }
 
   g_dir_close (dir);
+  g_list_free_full (list, g_free);
 
   cachename = g_build_filename (dirname, "giomodule.cache", NULL);
 
